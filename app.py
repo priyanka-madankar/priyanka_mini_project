@@ -87,7 +87,7 @@ def contains_spam_keywords(text):
 def train_job_detector():
 
   df = pd.read_excel(
-    "main/FakeJobPostings.xlsx",
+    "FakeJobPostings.xlsx",
     engine="openpyxl"
 )
 
