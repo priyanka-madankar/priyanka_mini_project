@@ -1,10 +1,12 @@
-import streamlit as st
+from pathlib import Path
+
 import pandas as pd
 import re
+import streamlit as st
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 SPAM_KEYWORDS = [
     "wire transfer",
@@ -32,11 +34,13 @@ SPAM_KEYWORDS = [
     "activate your account"
 ]
 
+
 def contains_spam_keywords(text):
 
     text_lower = text.lower()
 
     return any(keyword in text_lower for keyword in SPAM_KEYWORDS)
+
 
 def clean_text(text):
 
@@ -46,13 +50,85 @@ def clean_text(text):
 
     return text
 
+
+APP_DIR = Path(__file__).resolve().parent
+DATASET_CANDIDATES = [
+    APP_DIR / "FakeJobPostings.xlsx",
+    APP_DIR / "FakeJobPostings .xlsx",
+]
+
+
+def build_fallback_dataset():
+    return pd.DataFrame(
+        {
+            "title": [
+                "Remote Data Entry Clerk",
+                "Senior Software Engineer",
+                "Work From Home Customer Support",
+                "Accountant Needed Immediately",
+                "Sales Representative",
+                "Digital Marketing Manager",
+                "Quick Wire Transfer Opportunity",
+                "URGENT Bitcoin Investment Coach",
+                "Part Time Remote Assistant",
+                "Warehouse Associate",
+                "Pay a Processing Fee to Secure the Job",
+                "Guaranteed Income for Beginners",
+            ],
+            "description": [
+                "Process customer records and update spreadsheets from home.",
+                "Build and maintain web applications using Python and JavaScript.",
+                "Assist customers via chat and phone from a remote workstation.",
+                "Manage invoices and monthly reporting for a growing finance team.",
+                "Meet sales targets and coordinate with the regional sales team.",
+                "Plan and execute campaigns for a brand-focused marketing team.",
+                "We need help receiving payments through a secure wire transfer.",
+                "Learn cryptocurrency trading with guaranteed returns and low risk.",
+                "Support office operations with email, scheduling, and document prep.",
+                "Operate forklifts and maintain accurate inventory records.",
+                "Pay a small processing fee to receive your starter kit and job offer.",
+                "Start earning fast with guaranteed income and no experience needed.",
+            ],
+            "fraudulent": [0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 1],
+        }
+    )
+
+
+def load_training_data():
+    for dataset_path in DATASET_CANDIDATES:
+        if not dataset_path.exists():
+            continue
+
+        try:
+            df = pd.read_excel(dataset_path, engine="openpyxl")
+            required_columns = {"title", "description", "fraudulent"}
+
+            if not required_columns.issubset(df.columns):
+                continue
+
+            df = df[list(required_columns)].copy()
+            df["title"] = df["title"].fillna("")
+            df["description"] = df["description"].fillna("")
+            df = df.dropna(subset=["fraudulent"])
+            df = df[df["fraudulent"].isin([0, 1])]
+
+            if len(df) >= 4:
+                return df, False
+        except Exception:
+            continue
+
+    return build_fallback_dataset(), True
+
+
 @st.cache_resource
 def train_job_detector():
 
-    df = pd.read_excel(
-        "FakeJobPostings.xlsx",
-        engine="openpyxl"
-    )
+    df, used_fallback = load_training_data()
+
+    if used_fallback:
+        st.warning(
+            "The Excel dataset file is missing or invalid, so the app loaded a built-in demo dataset."
+        )
 
     df = df[['title', 'description', 'fraudulent']]
 
@@ -95,6 +171,7 @@ def train_job_detector():
     }
 
     return model, vectorizer, metrics
+
 
 st.set_page_config(
     page_title="Job Scam Detector",
