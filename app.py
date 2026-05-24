@@ -86,10 +86,10 @@ def contains_spam_keywords(text):
 @st.cache_resource
 def train_job_detector():
 
-  df = pd.read_excel(
-    "FakeJobPostings.xlsx",
-    engine="openpyxl"
-)
+    df = pd.read_excel(
+        "FakeJobPostings.xlsx",
+        engine="openpyxl"
+    )
 
     df = df[['title', 'description', 'fraudulent']]
 
@@ -132,7 +132,6 @@ def train_job_detector():
     }
 
     return model, vectorizer, metrics
-
 model, vectorizer, metrics = train_job_detector()
 
 with st.sidebar:
