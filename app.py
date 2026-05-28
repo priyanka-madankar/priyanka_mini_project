@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 
 import pandas as pd
 import re
@@ -61,6 +62,29 @@ DATASET_CANDIDATES = [
 ]
 
 
+def get_dataset_cache_key():
+    dataset_files = []
+    for pattern in ("*.csv", "*.xlsx", "*.xls"):
+        for path in sorted(APP_DIR.glob(pattern)):
+            if path.exists():
+                dataset_files.append((str(path.resolve()), path.stat().st_mtime))
+    return tuple(dataset_files)
+
+
+def get_candidate_dataset_paths():
+    seen = set()
+    for path in DATASET_CANDIDATES:
+        if path.exists():
+            seen.add(path.resolve())
+            yield path
+
+    for pattern in ("*.csv", "*.xlsx", "*.xls"):
+        for path in sorted(APP_DIR.glob(pattern)):
+            if path.resolve() in seen:
+                continue
+            yield path
+
+
 def build_fallback_dataset():
     return pd.DataFrame(
         {
@@ -98,10 +122,7 @@ def build_fallback_dataset():
 
 
 def load_training_data():
-    for dataset_path in DATASET_CANDIDATES:
-        if not dataset_path.exists():
-            continue
-
+    for dataset_path in get_candidate_dataset_paths():
         try:
             if dataset_path.suffix.lower() in {".xlsx", ".xls"}:
                 df = pd.read_excel(dataset_path, engine="openpyxl")
@@ -132,13 +153,13 @@ def load_training_data():
 
 
 @st.cache_resource
-def train_job_detector():
+def train_job_detector(dataset_cache_key):
 
     df, used_fallback = load_training_data()
 
     if used_fallback:
         st.warning(
-            "The Excel dataset file is missing or invalid, so the app loaded a built-in demo dataset."
+            "The dataset file is missing or invalid, so the app loaded a built-in demo dataset."
         )
 
     df = df[['title', 'description', 'fraudulent']]
@@ -448,7 +469,7 @@ st.markdown(
 
 st.markdown("---")
 
-model, vectorizer, metrics = train_job_detector()
+model, vectorizer, metrics = train_job_detector(get_dataset_cache_key())
 
 col1, col2, col3, col4 = st.columns(4)
 
