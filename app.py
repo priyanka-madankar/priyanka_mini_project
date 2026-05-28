@@ -55,6 +55,9 @@ APP_DIR = Path(__file__).resolve().parent
 DATASET_CANDIDATES = [
     APP_DIR / "FakeJobPostings.xlsx",
     APP_DIR / "FakeJobPostings .xlsx",
+    APP_DIR / "fake_job_postings.csv",
+    APP_DIR / "FakeJobPostings.csv",
+    APP_DIR / "fake_job_postings.xlsx",
 ]
 
 
@@ -100,13 +103,21 @@ def load_training_data():
             continue
 
         try:
-            df = pd.read_excel(dataset_path, engine="openpyxl")
-            required_columns = {"title", "description", "fraudulent"}
-
-            if not required_columns.issubset(df.columns):
+            if dataset_path.suffix.lower() in {".xlsx", ".xls"}:
+                df = pd.read_excel(dataset_path, engine="openpyxl")
+            elif dataset_path.suffix.lower() == ".csv":
+                df = pd.read_csv(dataset_path, low_memory=False, encoding="utf-8")
+            else:
                 continue
 
-            df = df[list(required_columns)].copy()
+            # Normalize header names to handle case / whitespace differences.
+            column_map = {col.strip().lower(): col for col in df.columns}
+            required_columns = {"title", "description", "fraudulent"}
+            if not required_columns.issubset(column_map.keys()):
+                continue
+
+            df = df[[column_map[c] for c in required_columns]].copy()
+            df.columns = [c.strip().lower() for c in df.columns]
             df["title"] = df["title"].fillna("")
             df["description"] = df["description"].fillna("")
             df = df.dropna(subset=["fraudulent"])
