@@ -157,10 +157,6 @@ def train_job_detector(dataset_cache_key):
 
     df, used_fallback = load_training_data()
 
-    if used_fallback:
-        st.warning(
-            "The dataset file is missing or invalid, so the app loaded a built-in demo dataset."
-        )
 
     df = df[['title', 'description', 'fraudulent']]
 
