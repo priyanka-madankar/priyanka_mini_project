@@ -104,11 +104,8 @@ Then open the URL shown in the terminal, usually `http://localhost:8501`.
 
 The app supports these dataset filenames in order of priority:
 
-1. `FakeJobPostings.xlsx`
-2. `FakeJobPostings .xlsx`
-3. `fake_job_postings.csv`
-4. `FakeJobPostings.csv`
-5. `fake_job_postings.xlsx`
+1. `FakeJobPostings.csv`
+
 
 ### Required dataset columns
 
